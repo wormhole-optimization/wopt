@@ -33,28 +33,40 @@ fn wopt() {
         Math::Add, smallvec![10, 11]);
     let plus_id = (12, plus);
 
-    //let hop = [x_id, y_id, plus_id];
+    let hop = [x_id, y_id, plus_id];
 
     let mut eg: EGraph<Math, Meta> = EGraph::default();
 
-    let mut id_map: HashMap<Id, Id> = HashMap::new();
+    from_dag(&mut eg, &hop);
+    //let mut id_map: HashMap<Id, Id> = HashMap::new();
 
-    let (id, exp) = x_id;
-    let node = exp.map_children(|child| *id_map.get(&child).unwrap());
-    let new_id = eg.add(node).id;
-    id_map.insert(id, new_id);
+    //let (id, exp) = x_id;
+    //let node = exp.map_children(|child| *id_map.get(&child).unwrap());
+    //let new_id = eg.add(node).id;
+    //id_map.insert(id, new_id);
 
-    let (id, exp) = y_id;
-    let node = exp.map_children(|child| *id_map.get(&child).unwrap());
-    let new_id = eg.add(node).id;
-    id_map.insert(id, new_id);
+    //let (id, exp) = y_id;
+    //let node = exp.map_children(|child| *id_map.get(&child).unwrap());
+    //let new_id = eg.add(node).id;
+    //id_map.insert(id, new_id);
 
-    let (id, exp) = plus_id;
-    let node = exp.map_children(|child| *id_map.get(&child).unwrap());
-    let new_id = eg.add(node).id;
-    id_map.insert(id, new_id);
+    //let (id, exp) = plus_id;
+    //let node = exp.map_children(|child| *id_map.get(&child).unwrap());
+    //let new_id = eg.add(node).id;
+    //id_map.insert(id, new_id);
 
     eg.dump_dot("wopt.dot");
+}
+
+fn from_dag(eg: &mut EGraph<Math, Meta>, dag: &[(Id, Expr<Math, Id>)]) {
+    let mut id_map: HashMap<Id, Id> = HashMap::new();
+
+    for (id, exp) in dag {
+        let node = exp.map_children(|child| {
+            *id_map.get(&child).expect("DAG parent inserted before its child")
+        });
+        id_map.insert(*id, eg.add(node).id);
+    }
 }
 
 #[test]
