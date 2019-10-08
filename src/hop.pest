@@ -1,0 +1,14 @@
+number = {"-"? ~ ASCII_DIGIT+ }
+
+hid = { ASCII_DIGIT+ }
+op = { !";" ~ ANY }
+args = { hid ~ ("," ~ hid)* }
+meta = { dim1 ~ "," ~ dim2 ~ "," ~ nrow ~ "," ~ ncol ~ "," ~ nnz }
+
+dim1 = { number }
+dim2 = { number }
+nrow = { number }
+ncol = { number }
+nnz = { number }
+
+hop = { hid ~ ";" ~ op ~ ";" ~ args? ~ ";" ~ meta }
