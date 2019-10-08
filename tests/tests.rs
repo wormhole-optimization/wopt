@@ -14,7 +14,9 @@ use wopt::{Math, Meta, parse_hop};
 use std::collections::HashMap;
 
 #[test]
-fn hop_parse(){ parse_hop(""); }
+fn hop_parse(){ 
+  println!("{:?}", parse_hop(""));
+}
 
 static HOP:&str ="101;395;op;394,378;0,0,-1,-1,-1; ...";
 

@@ -17,14 +17,26 @@ use smallvec::smallvec;
 #[grammar = "hop.pest"]
 pub struct HOPParser;
 
-pub fn parse_hop(s: &str) -> Vec<(Id, Expr<Math, Id>)> {
+pub fn parse_hop(s: &str) -> Vec<(u32, Id, Expr<Math, Id>)> {
     let s0 = "101;395;op;394,378;0,0,-1,-1,-1";
 
-    let hop = HOPParser::parse(Rule::hop, &s0)
-        .expect("parse failed");
-    println!("{:?}", hop);
+    let mut hop = HOPParser::parse(Rule::hop, &s0)
+        .expect("parse failed").next().unwrap().into_inner();
 
-    vec![(1, Expr::new(Math::Variable("x".parse().unwrap()), smallvec![]))]
+    let line = hop.next().unwrap().as_str().parse::<u32>().unwrap();
+    let hid = hop.next().unwrap().as_str().parse::<u32>().unwrap();
+    let op = hop.next().unwrap().as_str();
+    let mut args: smallvec::SmallVec<[_;2]> = hop.next().unwrap().into_inner().map(|pair| pair.as_str().parse::<u32>().unwrap()).collect();
+    let meta: Vec<i64> = hop.next().unwrap().into_inner().map(|pair| pair.as_str().parse::<i64>().unwrap()).collect();
+    //println!("{:?}", (line, hid, op, args, meta));
+
+    //for entry in hop {
+    //    println!("{:?}", entry);
+    //}
+
+    vec![(line, hid, Expr::new(Math::Add, args))]
+
+    //vec![(1, 1, Expr::new(Math::Variable("x".parse().unwrap()), smallvec![]))]
 }
 
 pub type MathEGraph<M = Meta> = egg::egraph::EGraph<Math, M>;
