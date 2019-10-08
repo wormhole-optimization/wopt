@@ -1,7 +1,8 @@
 number = {"-"? ~ ASCII_DIGIT+ }
 
+line = { ASCII_DIGIT+ }
 hid = { ASCII_DIGIT+ }
-op = { !";" ~ ANY }
+op = { (!";" ~ ANY)+ }
 args = { hid ~ ("," ~ hid)* }
 meta = { dim1 ~ "," ~ dim2 ~ "," ~ nrow ~ "," ~ ncol ~ "," ~ nnz }
 
@@ -11,4 +12,4 @@ nrow = { number }
 ncol = { number }
 nnz = { number }
 
-hop = { hid ~ ";" ~ op ~ ";" ~ args? ~ ";" ~ meta }
+hop = {line ~ ";" ~ hid ~ ";" ~ op ~ ";" ~ args? ~ ";" ~ meta }

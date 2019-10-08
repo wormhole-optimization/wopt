@@ -1,7 +1,7 @@
 use egg::{
     define_term,
     egraph::EClass,
-    expr::{Expr, Language, Name, RecExpr},
+    expr::{Expr, Id, Language, Name, RecExpr},
 };
 
 use ordered_float::NotNan;
@@ -11,10 +11,21 @@ extern crate pest;
 extern crate pest_derive;
 
 use pest::Parser;
+use smallvec::smallvec;
 
 #[derive(Parser)]
 #[grammar = "hop.pest"]
 pub struct HOPParser;
+
+pub fn parse_hop(s: &str) -> Vec<(Id, Expr<Math, Id>)> {
+    let s0 = "101;395;op;394,378;0,0,-1,-1,-1";
+
+    let hop = HOPParser::parse(Rule::hop, &s0)
+        .expect("parse failed");
+    println!("{:?}", hop);
+
+    vec![(1, Expr::new(Math::Variable("x".parse().unwrap()), smallvec![]))]
+}
 
 pub type MathEGraph<M = Meta> = egg::egraph::EGraph<Math, M>;
 

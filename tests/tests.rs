@@ -9,15 +9,15 @@ use log::*;
 use std::time::{Duration, Instant};
 use smallvec::smallvec;
 
-use wopt::{Math, Meta};
+use wopt::{Math, Meta, parse_hop};
 
 use std::collections::HashMap;
 
-fn parse_hop(s: &str) -> Vec<(Id, Expr<Math, Id>)> {
-    vec![(1, Expr::new(Math::Variable("x".parse().unwrap()), smallvec![]))]
-}
+#[test]
+fn hop_parse(){ parse_hop(""); }
 
-static HOP:&str ="(395);ua(+RC);(394);[0,0,-1,-1,-1]; [0,0,0 -> 0MB]";
+static HOP:&str ="101;395;op;394,378;0,0,-1,-1,-1; ...";
+
 static HOPS:&str = "(359);u(print);;[-1,-1,-1,-1,-1]; [-,0,0 -> 0MB]
 (388);u(print);;[-1,-1,-1,-1,-1]; [-,0,0 -> 0MB]
 (385);TRead y;;[10000,1,1000,1000,10000]; [0,0,0 -> 0MB]
