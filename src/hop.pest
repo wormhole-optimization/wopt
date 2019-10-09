@@ -1,6 +1,6 @@
 number = {"-"? ~ ASCII_DIGIT+ }
 
-line = { ASCII_DIGIT+ }
+line = { number ~ "," ~  number }
 hid = { ASCII_DIGIT+ }
 op = { (!";" ~ ANY)+ }
 args = { hid ~ ("," ~ hid)* }
@@ -12,4 +12,8 @@ nrow = { number }
 ncol = { number }
 nnz = { number }
 
-hop = {line ~ ";" ~ hid ~ ";" ~ op ~ ";" ~ args? ~ ";" ~ meta }
+hop = {line ~ ";" ~ hid ~ ";" ~ op ~ ";" ~ args? ~ ";" ~ meta ~ ";"}
+
+hops = { (hop ~ ("\r\n" | "\n"))+ }
+
+file = { SOI ~ (hops ~ ("\r\n" | "\n"))* ~ EOI }

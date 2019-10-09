@@ -9,13 +9,13 @@ use log::*;
 use std::time::{Duration, Instant};
 use smallvec::smallvec;
 
-use wopt::{Math, Meta, parse_hop};
+use wopt::{Math, Meta, parse_hop, parse_hop_file};
 
 use std::collections::HashMap;
 
 #[test]
 fn hop_parse(){ 
-  println!("{:?}", parse_hop(""));
+  println!("{:?}", parse_hop_file("/Users/remywang/wormhole/wopt/tests/hops"));
 }
 
 static HOP:&str ="101;395;op;394,378;0,0,-1,-1,-1; ...";

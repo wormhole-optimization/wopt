@@ -17,26 +17,102 @@ use smallvec::smallvec;
 #[grammar = "hop.pest"]
 pub struct HOPParser;
 
-pub fn parse_hop(s: &str) -> Vec<(u32, Id, Expr<Math, Id>)> {
-    let s0 = "101;395;op;394,378;0,0,-1,-1,-1";
+pub fn parse_hop(s: &str) -> Vec<(Vec<u32>, Id, Expr<Math, Id>, Vec<i64>)> {
+    let s0 = "101,100;395;op;394,378;0,0,-1,-1,-1
+101,100;395;op;394,378;0,0,-1,-1,-1
+101,100;395;op;394,378;0,0,-1,-1,-1
+101,100;395;op;394,378;0,0,-1,-1,-1
+";
 
-    let mut hop = HOPParser::parse(Rule::hop, &s0)
+    let mut hops = HOPParser::parse(Rule::hops, &s0)
         .expect("parse failed").next().unwrap().into_inner();
 
-    let line = hop.next().unwrap().as_str().parse::<u32>().unwrap();
-    let hid = hop.next().unwrap().as_str().parse::<u32>().unwrap();
-    let op = hop.next().unwrap().as_str();
-    let mut args: smallvec::SmallVec<[_;2]> = hop.next().unwrap().into_inner().map(|pair| pair.as_str().parse::<u32>().unwrap()).collect();
-    let meta: Vec<i64> = hop.next().unwrap().into_inner().map(|pair| pair.as_str().parse::<i64>().unwrap()).collect();
-    //println!("{:?}", (line, hid, op, args, meta));
+    let mut hs = Vec::new();
 
-    //for entry in hop {
-    //    println!("{:?}", entry);
-    //}
+    for h in hops {
+        let mut hop = h.into_inner();
+        // parse line number
+        let mut line: Vec<_> = hop.next().unwrap().into_inner()
+            .map(|pair| {
+                pair.as_str().parse::<u32>().unwrap()
+            }).collect();
+        // parse hop id
+        let hid = hop.next().unwrap()
+            .as_str().parse::<u32>().unwrap();
+        // parse operator
+        let op = hop.next()
+            .unwrap().as_str();
+        // parse arguments
+        let mut args: smallvec::SmallVec<[_;2]> =
+            hop.next().unwrap().into_inner()
+            .map(|pair| {
+                pair.as_str().parse::<u32>().unwrap()
+            }).collect();
+        // parse metadata
+        let meta: Vec<i64> = hop.next().unwrap().into_inner()
+            .map(|pair| {
+                pair.as_str().parse::<i64>().unwrap()
+            }).collect();
 
-    vec![(line, hid, Expr::new(Math::Add, args))]
+        hs.push((line, hid, Expr::new(Math::Add, args), meta));
+    }
+    hs
+}
 
-    //vec![(1, 1, Expr::new(Math::Variable("x".parse().unwrap()), smallvec![]))]
+pub fn parse_hop_file(s: &str) {
+    let file = std::fs::read_to_string(s).expect("cannot read file");
+
+    let fc = HOPParser::parse(Rule::file, &file)
+        .expect("parse failed")
+        .next().unwrap();
+
+    for hs in fc.into_inner() {
+        match hs.as_rule() {
+            Rule::hops => {
+                let mut hops = hs.into_inner();
+
+                let mut hopps = Vec::new();
+
+                for h in hops {
+                    let mut hop = h.into_inner();
+                    // parse line number
+                    let mut line: Vec<_> = hop.next().unwrap().into_inner()
+                        .map(|pair| {
+                            pair.as_str().parse::<u32>().unwrap()
+                        }).collect();
+                    // parse hop id
+                    let hid = hop.next().unwrap()
+                        .as_str().parse::<u32>().unwrap();
+                    // parse operator
+                    let op = hop.next()
+                        .unwrap().as_str();
+                    // parse arguments
+                    let mut args: smallvec::SmallVec<[_;2]> =
+                        match hop.peek().unwrap().as_rule() {
+                            Rule::args => {
+                                hop.next().unwrap().into_inner()
+                                    .map(|pair| {
+                                        pair.as_str().parse::<u32>().unwrap()
+                                    }).collect()
+                            },
+                            _ => {
+                                smallvec::smallvec![]
+                            }
+                        };
+                    // parse metadata
+                    let meta: Vec<i64> = hop.next().unwrap().into_inner()
+                        .map(|pair| {
+                            pair.as_str().parse::<i64>().unwrap()
+                        }).collect();
+
+                    hopps.push((line, hid, Expr::new(Math::Add, args), meta));
+                }
+                println!("{:?}", hopps);
+            }
+            Rule::EOI => (),
+            _ => unreachable!(),
+        }
+    }
 }
 
 pub type MathEGraph<M = Meta> = egg::egraph::EGraph<Math, M>;
