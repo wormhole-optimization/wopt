@@ -11,7 +11,7 @@ extern crate pest;
 extern crate pest_derive;
 
 use pest::Parser;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use log::*;
 
 #[derive(Parser)]
@@ -146,7 +146,7 @@ impl Language for Math {
 
 #[derive(Debug, Clone)]
 pub struct Meta {
-    pub schema: HashSet<Name>,
+    pub schema: HashMap<Name, usize>,
 }
 
 fn eval(op: Math, args: &[Constant]) -> Option<Constant> {
@@ -168,40 +168,59 @@ impl egg::egraph::Metadata<Math> for Meta {
                 assert_eq!(expr.children.len(), 2, "wrong length in add");
                 let x = &expr.children.iter().nth(0).unwrap().schema;
                 let y = &expr.children.iter().nth(1).unwrap().schema;
-                let schema: HashSet<Name> = x.union(y).cloned().collect();
+                let mut schema = x.clone();
+                schema.extend(y.clone());
+                //let schema: HashMap<Name, usize> = x.extend(y).collect(); //x.union(y).cloned().collect();
                 schema
             },
             Math::Mul => {
                 assert_eq!(expr.children.len(), 2, "wrong length in multiply");
                 let x = &expr.children.iter().nth(0).unwrap().schema;
                 let y = &expr.children.iter().nth(1).unwrap().schema;
-                let schema: HashSet<Name> = x.union(y).cloned().collect();
+                let mut schema = x.clone();
+                schema.extend(y.clone());
                 schema
             },
             Math::Agg => {
                 assert_eq!(expr.children.len(), 2, "wrong length in aggregate");
                 let dim = &expr.children.iter().nth(0).unwrap().schema;
                 let body = &expr.children.iter().nth(1).unwrap().schema;
-                let schema: HashSet<Name> = body.difference(&dim).cloned().collect();
+                let mut schema = body.clone();
+                for k in dim.keys() {
+                    schema.remove(k);
+                }
                 schema
             },
             Math::Dim => {
                 assert_eq!(expr.children.len(), 2, "wrong length in dimension");
-                expr.children.iter().nth(0).unwrap().schema.clone()
-            },
-            Math::Matrix => {
-                let mut schema = HashSet::new();
-                assert_ne!(expr.children.len(), 0, "matrix expression is empty");
-                // skip to avoid couting var name in schema
-                for d in expr.children.iter().skip(1) {
-                    schema.extend(d.schema.iter().cloned());
+                let i = &expr.children.iter().nth(0).unwrap().schema;
+                let n = &expr.children.iter().nth(1).unwrap().schema;
+                let mut schema = HashMap::new();
+                for k in i.keys() {
+                    for v in n.values() {
+                        schema.insert(k.clone(), *v);
+                    }
                 }
                 schema
             },
-            Math::Constant(_) => HashSet::default(),
+            Math::Matrix => {
+                let mut schema = HashMap::new();
+                assert_ne!(expr.children.len(), 0, "matrix expression is empty");
+                // skip to avoid couting var name in schema
+                for d in expr.children.iter().skip(1) {
+                    schema.extend(d.schema.clone());
+                }
+                schema
+            },
+            Math::Constant(n) => {
+                let mut ns = HashMap::new();
+                let un = n.round() as usize;
+                ns.insert(Name::from(""), un);
+                ns
+            }
             Math::Variable(v) => {
-                let mut ns = HashSet::new();
-                ns.insert(v);
+                let mut ns = HashMap::new();
+                ns.insert(v, 0);
                 ns
             },
         };
