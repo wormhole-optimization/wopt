@@ -13,7 +13,7 @@ use wopt::{Math, Meta, parse_hop, parse_hop_file};
 
 use std::collections::HashMap;
 
-#[test]
+//#[test]
 fn hop_parse(){
   println!("{:?}", parse_hop_file("/Users/r/wormhole/wopt/tests/hops"));
 }
@@ -54,7 +54,7 @@ fn schema() {
     let start = "(+ x y)";// "(SUM (dim j 10) (* (b+ a (dim i 5) (dim j 10)) (b+ b (dim j 10) (dim k 7))))";
     let start_expr = Math::parse_expr(start).unwrap();
 
-    let (mut egraph, _root) = EGraph::<Math, ()>::from_expr(&start_expr);
+    let (mut egraph, _root) = EGraph::<Math, Meta>::from_expr(&start_expr);
     run_rules(&mut egraph, 4, 500);
 
     //let rules = wopt::rules();
@@ -64,10 +64,10 @@ fn schema() {
 
 #[test]
 fn grammar() {
-    let start = "(SUM (dim j 10) (+ a b))";
+    let start = "(SUM (dim j 10) a)";
     let start_expr = Math::parse_expr(start).unwrap();
 
-    let (mut egraph, _root) = EGraph::<Math, ()>::from_expr(&start_expr);
+    let (mut egraph, _root) = EGraph::<Math, Meta>::from_expr(&start_expr);
 
     //let rules = wopt::rules();
 
@@ -99,7 +99,7 @@ fn associate_adds() {
     let start = "(+ 1 (+ 2 (+ 3 (+ 4 (+ 5 (+ 6 7))))))";
     let start_expr = Math::parse_expr(start).unwrap();
 
-    let (mut egraph, _root) = EGraph::<Math, ()>::from_expr(&start_expr);
+    let (mut egraph, _root) = EGraph::<Math, Meta>::from_expr(&start_expr);
 
     let rules = {
         let all = wopt::rules();
@@ -122,9 +122,7 @@ fn associate_adds() {
     egraph.dump_dot("associate.dot");
 }
 
-fn run_rules<M>(egraph: &mut EGraph<Math, M>, iters: usize, limit: usize) -> Duration
-where
-    M: Metadata<Math>,
+fn run_rules(egraph: &mut EGraph<Math, Meta>, iters: usize, limit: usize) -> Duration
 {
     let rules = wopt::rules();
     let start_time = Instant::now();
@@ -231,7 +229,7 @@ impl CheckSimplify {
 #[should_panic(expected = "Could not simplify")]
 fn does_not_simplify() {
     CheckSimplify {
-        start: "(SUM (dim j 10) (* (b+ a (dim i 5) (dim j 10)) (b+ b (dim j 10) (dim k 7))))",//;"(+ x y)",
+        start: "(SUM (dim j 10) (b+ a (dim i 5) (dim k 10)))",//;"(+ x y)",
         end: "(/ x y)",
         iters: 5,
         limit: 1_000,

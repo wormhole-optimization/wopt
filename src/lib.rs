@@ -157,7 +157,7 @@ fn eval(op: Math, args: &[Constant]) -> Option<Constant> {
 impl egg::egraph::Metadata<Math> for Meta {
     type Error = std::convert::Infallible;
     fn merge(&self, other: &Self) -> Self {
-        assert_eq!(self.schema, other.schema, "merging expressions with different schema");
+        //assert_eq!(self.schema, other.schema, "merging expressions with different schema");
         self.clone()
     }
 

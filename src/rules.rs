@@ -1,6 +1,8 @@
 use indexmap::IndexMap;
+use std::ops::Index;
+use ordered_float::NotNan;
 
-use crate::Math;
+use crate::{Math, Meta};
 use egg::{
     egraph::{Metadata, EGraph, AddResult},
     parse::ParsableLanguage,
@@ -9,7 +11,7 @@ use egg::{
 };
 use smallvec::smallvec;
 
-fn mk_rules<M: Metadata<Math>>(tuples: &[(&str, &str, &str)]) -> Vec<Rewrite<Math, M>> {
+fn mk_rules(tuples: &[(&str, &str, &str)]) -> Vec<Rewrite<Math, Meta>> {
     tuples
         .iter()
         .map(|(name, left, right)| Math::parse_rewrite(name, left, right).unwrap())
@@ -17,7 +19,7 @@ fn mk_rules<M: Metadata<Math>>(tuples: &[(&str, &str, &str)]) -> Vec<Rewrite<Mat
 }
 
 #[rustfmt::skip]
-pub fn rules<M: Metadata<Math>>() -> IndexMap<&'static str, Vec<Rewrite<Math, M>>> {
+pub fn rules() -> IndexMap<&'static str, Vec<Rewrite<Math, Meta>>> {
     let mut m = IndexMap::new();
     let mut add = |name, rules| {
         if m.contains_key(name) {
@@ -103,14 +105,24 @@ struct SumIA {
     a: QuestionMarkName,
 }
 
-impl <M: Metadata<Math>> Applier<Math, M> for SumIA {
-    fn apply(&self, egraph: &mut EGraph<Math, M>, map: &WildMap) -> Vec<AddResult> {
+impl Applier<Math, Meta> for SumIA {
+    fn apply(&self, egraph: &mut EGraph<Math, Meta>, map: &WildMap) -> Vec<AddResult> {
         let i = map[&self.i][0];
         let a = map[&self.a][0];
-        println!("REWRITINGGGG SUM {:?} {:?}", i.clone(), a.clone());
 
-        let res = egraph.add(Expr::new(Math::Agg , smallvec![i, a]));
+        let i_schema = egraph.index(i).metadata.schema.clone();
+        let a_schema = egraph.index(a).metadata.schema.clone();
 
-        vec![res]
+        let mut res = Vec::new();
+
+        for k in i_schema.keys() {
+            if !a_schema.contains_key(k) {
+                let i_abs = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(k).unwrap() as f64)), smallvec![]));
+                let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, i_abs.id]));
+                res.push(mul);
+            }
+        }
+
+        res
     }
 }
