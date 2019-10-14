@@ -1,7 +1,13 @@
 use indexmap::IndexMap;
 
 use crate::Math;
-use egg::{egraph::Metadata, parse::ParsableLanguage, pattern::Rewrite};
+use egg::{
+    egraph::{Metadata, EGraph, AddResult},
+    parse::ParsableLanguage,
+    pattern::{Rewrite, Applier, WildMap},
+    expr::{QuestionMarkName, Expr},
+};
+use smallvec::smallvec;
 
 fn mk_rules<M: Metadata<Math>>(tuples: &[(&str, &str, &str)]) -> Vec<Rewrite<Math, M>> {
     tuples
@@ -78,5 +84,33 @@ pub fn rules<M: Metadata<Math>>() -> IndexMap<&'static str, Vec<Rewrite<Math, M>
         ],
     );
 
+    let sum_i_a = Rewrite::new(
+        "sum_i_a",
+        Math::parse_pattern("(SUM ?i ?a)").unwrap(),
+        SumIA {
+            i: "?i".parse().unwrap(),
+            a: "?a".parse().unwrap(),
+        },
+    );
+
+    m.insert("dyn_rules", vec![sum_i_a]);
     m
+}
+
+#[derive(Debug)]
+struct SumIA {
+    i: QuestionMarkName,
+    a: QuestionMarkName,
+}
+
+impl <M: Metadata<Math>> Applier<Math, M> for SumIA {
+    fn apply(&self, egraph: &mut EGraph<Math, M>, map: &WildMap) -> Vec<AddResult> {
+        let i = map[&self.i][0];
+        let a = map[&self.a][0];
+        println!("REWRITINGGGG SUM {:?} {:?}", i.clone(), a.clone());
+
+        let res = egraph.add(Expr::new(Math::Agg , smallvec![i, a]));
+
+        vec![res]
+    }
 }
