@@ -12,6 +12,7 @@ extern crate pest_derive;
 
 use pest::Parser;
 use std::collections::HashSet;
+use log::*;
 
 #[derive(Parser)]
 #[grammar = "hop.pest"]
@@ -127,7 +128,7 @@ define_term! {
     pub enum Math {
         Add = "+",
         Mul = "*",
-        Div = "SUM",
+        Agg = "SUM",
 
         Dim = "dim",
         Matrix = "b+",
@@ -156,12 +157,57 @@ fn eval(op: Math, args: &[Constant]) -> Option<Constant> {
 impl egg::egraph::Metadata<Math> for Meta {
     type Error = std::convert::Infallible;
     fn merge(&self, other: &Self) -> Self {
+        assert_eq!(self.schema, other.schema, "merging expressions with different schema");
         self.clone()
     }
 
     fn make(expr: Expr<Math, &Self>) -> Self {
+        println!("ahhhhh");
+        let schema  = match expr.op {
+            Math::Add => {
+                assert_eq!(expr.children.len(), 2, "wrong length in add");
+                let x = &expr.children.iter().nth(0).unwrap().schema;
+                let y = &expr.children.iter().nth(1).unwrap().schema;
+                let schema: HashSet<Name> = x.union(y).cloned().collect();
+                schema
+            },
+            Math::Mul => {
+                assert_eq!(expr.children.len(), 2, "wrong length in multiply");
+                let x = &expr.children.iter().nth(0).unwrap().schema;
+                let y = &expr.children.iter().nth(1).unwrap().schema;
+                let schema: HashSet<Name> = x.union(y).cloned().collect();
+                schema
+            },
+            Math::Agg => {
+                assert_eq!(expr.children.len(), 2, "wrong length in aggregate");
+                let dim = &expr.children.iter().nth(0).unwrap().schema;
+                let body = &expr.children.iter().nth(1).unwrap().schema;
+                let schema: HashSet<Name> = body.difference(&dim).cloned().collect();
+                schema
+            },
+            Math::Dim => {
+                assert_eq!(expr.children.len(), 2, "wrong length in dimension");
+                expr.children.iter().nth(0).unwrap().schema.clone()
+            },
+            Math::Matrix => {
+                let mut schema = HashSet::new();
+                assert_ne!(expr.children.len(), 0, "matrix expression is empty");
+                // skip to avoid couting var name in schema
+                for d in expr.children.iter().skip(1) {
+                    schema.extend(d.schema.iter().cloned());
+                }
+                schema
+            },
+            Math::Constant(_) => HashSet::default(),
+            Math::Variable(v) => {
+                let mut ns = HashSet::new();
+                ns.insert(v);
+                ns
+            },
+        };
+        println!("schema:{:?}", schema.clone());
         Self {
-            schema: HashSet::default()
+            schema
         }
     }
 

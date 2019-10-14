@@ -49,6 +49,20 @@ fn wopt() {
 }
 
 #[test]
+fn schema() {
+    // let _ = env_logger::builder().is_test(true).try_init();
+    let start = "(+ x y)";// "(SUM (dim j 10) (* (b+ a (dim i 5) (dim j 10)) (b+ b (dim j 10) (dim k 7))))";
+    let start_expr = Math::parse_expr(start).unwrap();
+
+    let (mut egraph, _root) = EGraph::<Math, ()>::from_expr(&start_expr);
+    run_rules(&mut egraph, 4, 500);
+
+    //let rules = wopt::rules();
+
+    egraph.dump_dot("schema.dot");
+}
+
+#[test]
 fn grammar() {
     let start = "(SUM (dim j 10) (+ a b))";
     let start_expr = Math::parse_expr(start).unwrap();
@@ -217,7 +231,7 @@ impl CheckSimplify {
 #[should_panic(expected = "Could not simplify")]
 fn does_not_simplify() {
     CheckSimplify {
-        start: "(+ x y)",
+        start: "(SUM (dim j 10) (* (b+ a (dim i 5) (dim j 10)) (b+ b (dim j 10) (dim k 7))))",//;"(+ x y)",
         end: "(/ x y)",
         iters: 5,
         limit: 1_000,
