@@ -4,7 +4,7 @@ use ordered_float::NotNan;
 
 use crate::{Math, Meta};
 use egg::{
-    egraph::{Metadata, EGraph, AddResult},
+    egraph::{EGraph, AddResult},
     parse::ParsableLanguage,
     pattern::{Rewrite, Applier, WildMap},
     expr::{QuestionMarkName, Expr},
@@ -95,8 +95,25 @@ pub fn rules() -> IndexMap<&'static str, Vec<Rewrite<Math, Meta>>> {
         },
     );
 
-    m.insert("dyn_rules", vec![sum_i_a]);
+    let mul_a_agg = Rewrite::new(
+        "pullup_mul",
+        Math::parse_pattern("(SUM ?i (* ?a ?b))").unwrap(),
+        MulAAgg {
+            a: "?a".parse().unwrap(),
+            b: "?b".parse().unwrap(),
+            i: "?i".parse().unwrap(),
+        }
+    );
+
+    m.insert("dyn_rules", vec![sum_i_a, mul_a_agg]);
     m
+}
+
+#[derive(Debug)]
+struct MulAAgg {
+    a: QuestionMarkName,
+    b: QuestionMarkName,
+    i: QuestionMarkName,
 }
 
 #[derive(Debug)]
@@ -119,6 +136,29 @@ impl Applier<Math, Meta> for SumIA {
             if !a_schema.contains_key(k) {
                 let i_abs = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(k).unwrap() as f64)), smallvec![]));
                 let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, i_abs.id]));
+                res.push(mul);
+            }
+        }
+
+        res
+    }
+}
+
+impl Applier<Math, Meta> for MulAAgg {
+    fn apply(&self, egraph: &mut EGraph<Math, Meta>, map: &WildMap) -> Vec<AddResult> {
+        let i = map[&self.i][0];
+        let a = map[&self.a][0];
+        let b = map[&self.b][0];
+
+        let i_schema = egraph.index(i).metadata.schema.clone();
+        let a_schema = egraph.index(a).metadata.schema.clone();
+
+        let mut res = Vec::new();
+
+        for k in i_schema.keys() {
+            if !a_schema.contains_key(k) {
+                let agg = egraph.add(Expr::new(Math::Agg, smallvec![i, b]));
+                let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, agg.id]));
                 res.push(mul);
             }
         }
