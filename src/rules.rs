@@ -1,7 +1,7 @@
-use nanoid;
-
+use std::collections::hash_map::DefaultHasher;
 use indexmap::IndexMap;
 use std::ops::Index;
+use std::hash::{Hash, Hasher};
 use ordered_float::NotNan;
 
 use crate::{Math, Meta};
@@ -30,13 +30,13 @@ pub fn rules() -> IndexMap<&'static str, Vec<Rewrite<Math, Meta>>> {
         m.insert(name, mk_rules(rules));
     };
 
-    //add(
-    //    "commutativity",
-    //    &[
-    //        ("+-commutative", "(+ ?a ?b)", "(+ ?b ?a)"),
-    //        ("*-commutative", "(* ?a ?b)", "(* ?b ?a)"),
-    //    ],
-    //);
+    add(
+        "commutativity",
+        &[
+            ("+-commutative", "(+ ?a ?b)", "(+ ?b ?a)"),
+            ("*-commutative", "(* ?a ?b)", "(* ?b ?a)"),
+        ],
+    );
     add(
         "associativity",
         &[
@@ -252,9 +252,12 @@ impl Applier<Math, Meta> for AggMul {
                 let agg = egraph.add(Expr::new(Math::Agg, smallvec![i, mul.id]));
                 res.push(agg);
             } else {
+                println!("YESSSS");
                 let i_s = i_schema.keys().nth(0).unwrap();
 
-                let fv = nanoid::generate(10);
+                let mut s = DefaultHasher::new();
+                [i, a, b].hash(&mut s);
+                let fv = s.finish().to_string();
 
                 let iv = egraph.add(Expr::new(Math::Variable(i_s.clone()), smallvec![]));
                 let i_n = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(i_s).unwrap() as f64)), smallvec![]));
