@@ -64,14 +64,14 @@ fn schema() {
 
 #[test]
 fn grammar() {
-    let start = "(* (b+ b (dim k 8) (dim j 10)) (SUM (dim j 10) (b+ a (dim j 10) (dim i 5))))";
+    let start = "(subst i j (+ a (+ b j)))";
     let start_expr = Math::parse_expr(start).unwrap();
 
     let (mut egraph, _root) = EGraph::<Math, Meta>::from_expr(&start_expr);
 
     //let rules = wopt::rules();
 
-    for _ in 0..14 {
+    for _ in 0..2 {
         for (_name, rs) in wopt::rules() {
             for rule in rs {
                 rule.run(&mut egraph);
