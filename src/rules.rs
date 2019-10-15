@@ -208,25 +208,34 @@ impl Applier<Math, Meta> for AggMul {
         let b = map[&self.b][0];
 
         let i_schema = egraph.index(i).metadata.schema.clone();
+        let a_schema = egraph.index(a).metadata.schema.clone();
 
         let mut res = Vec::new();
 
-        let i_s = i_schema.keys().nth(0).unwrap();
+        for k in i_schema.keys() {
+            if !a_schema.contains_key(k) {
+                let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, b]));
+                let agg = egraph.add(Expr::new(Math::Agg, smallvec![i, mul.id]));
+                res.push(agg);
+            } else {
+                let i_s = i_schema.keys().nth(0).unwrap();
 
-        let fv = "sooofresh";
+                let fv = "sooofresh";
 
-        let iv = egraph.add(Expr::new(Math::Variable(i_s.clone()), smallvec![]));
-        let i_n = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(i_s).unwrap() as f64)), smallvec![]));
+                let iv = egraph.add(Expr::new(Math::Variable(i_s.clone()), smallvec![]));
+                let i_n = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(i_s).unwrap() as f64)), smallvec![]));
 
-        let v = egraph.add(Expr::new(Math::Variable(Name::from(fv)), smallvec![]));
+                let v = egraph.add(Expr::new(Math::Variable(Name::from(fv)), smallvec![]));
 
-        let fdim = egraph.add(Expr::new(Math::Dim, smallvec![v.id, i_n.id]));
+                let fdim = egraph.add(Expr::new(Math::Dim, smallvec![v.id, i_n.id]));
 
-        let b_subst = egraph.add(Expr::new(Math::Subst, smallvec![v.id, iv.id, b]));
-        let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, b_subst.id]));
-        let agg = egraph.add(Expr::new(Math::Agg, smallvec![fdim.id, mul.id]));
+                let b_subst = egraph.add(Expr::new(Math::Subst, smallvec![v.id, iv.id, b]));
+                let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, b_subst.id]));
+                let agg = egraph.add(Expr::new(Math::Agg, smallvec![fdim.id, mul.id]));
 
-        res.push(agg);
+                res.push(agg);
+            }
+        }
 
         res
     }
