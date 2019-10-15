@@ -218,9 +218,10 @@ impl Applier<Math, Meta> for AggMul {
         let iv = egraph.add(Expr::new(Math::Variable(i_s.clone()), smallvec![]));
         let i_n = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(i_s).unwrap() as f64)), smallvec![]));
 
-        let fdim = egraph.add(Expr::new(Math::Dim, smallvec![iv.id, i_n.id]));
-
         let v = egraph.add(Expr::new(Math::Variable(Name::from(fv)), smallvec![]));
+
+        let fdim = egraph.add(Expr::new(Math::Dim, smallvec![v.id, i_n.id]));
+
         let b_subst = egraph.add(Expr::new(Math::Subst, smallvec![v.id, iv.id, b]));
         let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, b_subst.id]));
         let agg = egraph.add(Expr::new(Math::Agg, smallvec![fdim.id, mul.id]));

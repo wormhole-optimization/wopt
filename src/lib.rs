@@ -228,11 +228,11 @@ impl egg::egraph::Metadata<Math> for Meta {
                 let mut n = 0;
 
                 let mut schema = r.clone();
-                if e.keys().nth(0) == v.keys().nth(0) {
-                    schema = r.clone();
-                } else {
+                if e.keys().nth(0) != v.keys().nth(0) {
                     for k in v.keys() {
+                        println!("key is {:?}", k);
                         n = schema.remove(k).unwrap();
+                        println!("removed {:?}", k);
                     }
                     for k in e.keys() {
                         schema.insert(k.clone(), n);
