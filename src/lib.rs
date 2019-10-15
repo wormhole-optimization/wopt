@@ -1,7 +1,7 @@
 use egg::{
     define_term,
     egraph::EClass,
-    expr::{Expr, Id, Language, Name, RecExpr},
+    expr::{Expr, Id, Language, Name},
 };
 
 use ordered_float::NotNan;
@@ -11,21 +11,20 @@ extern crate pest;
 extern crate pest_derive;
 
 use pest::Parser;
-use std::collections::{HashSet, HashMap};
-use log::*;
+use std::collections::HashMap;
 
 #[derive(Parser)]
 #[grammar = "hop.pest"]
 pub struct HOPParser;
 
-pub fn parse_hop(s: &str) -> Vec<(Vec<u32>, Id, Expr<Math, Id>, Vec<i64>)> {
+pub fn parse_hop(_s: &str) -> Vec<(Vec<u32>, Id, Expr<Math, Id>, Vec<i64>)> {
     let s0 = "101,100;395;op;394,378;0,0,-1,-1,-1
 101,100;395;op;394,378;0,0,-1,-1,-1
 101,100;395;op;394,378;0,0,-1,-1,-1
 101,100;395;op;394,378;0,0,-1,-1,-1
 ";
 
-    let mut hops = HOPParser::parse(Rule::hops, &s0)
+    let hops = HOPParser::parse(Rule::hops, &s0)
         .expect("parse failed").next().unwrap().into_inner();
 
     let mut hs = Vec::new();
@@ -33,7 +32,7 @@ pub fn parse_hop(s: &str) -> Vec<(Vec<u32>, Id, Expr<Math, Id>, Vec<i64>)> {
     for h in hops {
         let mut hop = h.into_inner();
         // parse line number
-        let mut line: Vec<_> = hop.next().unwrap().into_inner()
+        let line: Vec<_> = hop.next().unwrap().into_inner()
             .map(|pair| {
                 pair.as_str().parse::<u32>().unwrap()
             }).collect();
@@ -41,10 +40,10 @@ pub fn parse_hop(s: &str) -> Vec<(Vec<u32>, Id, Expr<Math, Id>, Vec<i64>)> {
         let hid = hop.next().unwrap()
             .as_str().parse::<u32>().unwrap();
         // parse operator
-        let op = hop.next()
+        let _op = hop.next()
             .unwrap().as_str();
         // parse arguments
-        let mut args: smallvec::SmallVec<[_;2]> =
+        let args: smallvec::SmallVec<[_;2]> =
             hop.next().unwrap().into_inner()
             .map(|pair| {
                 pair.as_str().parse::<u32>().unwrap()
@@ -70,14 +69,14 @@ pub fn parse_hop_file(s: &str) {
     for hs in fc.into_inner() {
         match hs.as_rule() {
             Rule::hops => {
-                let mut hops = hs.into_inner();
+                let hops = hs.into_inner();
 
                 let mut hopps = Vec::new();
 
                 for h in hops {
                     let mut hop = h.into_inner();
                     // parse line number
-                    let mut line: Vec<_> = hop.next().unwrap().into_inner()
+                    let line: Vec<_> = hop.next().unwrap().into_inner()
                         .map(|pair| {
                             pair.as_str().parse::<u32>().unwrap()
                         }).collect();
@@ -85,10 +84,10 @@ pub fn parse_hop_file(s: &str) {
                     let hid = hop.next().unwrap()
                         .as_str().parse::<u32>().unwrap();
                     // parse operator
-                    let op = hop.next()
+                    let _op = hop.next()
                         .unwrap().as_str();
                     // parse arguments
-                    let mut args: smallvec::SmallVec<[_;2]> =
+                    let args: smallvec::SmallVec<[_;2]> =
                         match hop.peek().unwrap().as_rule() {
                             Rule::args => {
                                 hop.next().unwrap().into_inner()
@@ -134,6 +133,8 @@ define_term! {
         Matrix = "b+",
         Constant(Constant),
         Variable(Name),
+
+        Subst = "subst",
     }
 }
 
@@ -149,20 +150,15 @@ pub struct Meta {
     pub schema: HashMap<Name, usize>,
 }
 
-fn eval(op: Math, args: &[Constant]) -> Option<Constant> {
-    None
-}
-
 // TODO
 impl egg::egraph::Metadata<Math> for Meta {
     type Error = std::convert::Infallible;
-    fn merge(&self, other: &Self) -> Self {
+    fn merge(&self, _other: &Self) -> Self {
         //assert_eq!(self.schema, other.schema, "merging expressions with different schema");
         self.clone()
     }
 
     fn make(expr: Expr<Math, &Self>) -> Self {
-        println!("ahhhhh");
         let schema  = match expr.op {
             Math::Add => {
                 assert_eq!(expr.children.len(), 2, "wrong length in add");
@@ -223,6 +219,27 @@ impl egg::egraph::Metadata<Math> for Meta {
                 ns.insert(v, 0);
                 ns
             },
+            Math::Subst => {
+                assert_eq!(expr.children.len(), 3, "wrong length in subst");
+                let e = &expr.children.iter().nth(0).unwrap().schema;
+                let v = &expr.children.iter().nth(1).unwrap().schema;
+                let r = &expr.children.iter().nth(2).unwrap().schema;
+
+                let mut n = 0;
+
+                let mut schema = r.clone();
+                if e.keys().nth(0) == v.keys().nth(0) {
+                    schema = r.clone();
+                } else {
+                    for k in v.keys() {
+                        n = schema.remove(k).unwrap();
+                    }
+                    for k in e.keys() {
+                        schema.insert(k.clone(), n);
+                    };
+                }
+                schema
+            }
         };
         println!("schema:{:?}", schema.clone());
         Self {
@@ -230,6 +247,6 @@ impl egg::egraph::Metadata<Math> for Meta {
         }
     }
 
-    fn modify(eclass: &mut EClass<Math, Self>) {
+    fn modify(_eclass: &mut EClass<Math, Self>) {
     }
 }

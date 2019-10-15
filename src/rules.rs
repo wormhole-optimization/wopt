@@ -7,7 +7,7 @@ use egg::{
     egraph::{EGraph, AddResult},
     parse::ParsableLanguage,
     pattern::{Rewrite, Applier, WildMap},
-    expr::{QuestionMarkName, Expr},
+    expr::{QuestionMarkName, Expr, Name},
 };
 use smallvec::smallvec;
 
@@ -105,8 +105,42 @@ pub fn rules() -> IndexMap<&'static str, Vec<Rewrite<Math, Meta>>> {
         }
     );
 
-    m.insert("dyn_rules", vec![sum_i_a, mul_a_agg]);
+    let agg_i_mul = Rewrite::new(
+        "pushdown_mul",
+        Math::parse_pattern("(* ?a (SUM ?i ?b))").unwrap(),
+        AggMul {
+            a: "?a".parse().unwrap(),
+            b: "?b".parse().unwrap(),
+            i: "?i".parse().unwrap(),
+        }
+    );
+
+    //let subst = Rewrite::new(
+    //    "var_subst",
+    //    Math::parse_pattern("(subst ?e ?v ?r)").unwrap(),
+    //    VarSubst {
+    //        e: "?e".parse().unwrap(),
+    //        v: "?v".parse().unwrap(),
+    //        r: "?r".parse().unwrap(),
+    //    }
+    //);
+
+    m.insert("dyn_rules", vec![sum_i_a, mul_a_agg, agg_i_mul]);
     m
+}
+
+#[derive(Debug)]
+struct VarSubst {
+    e: QuestionMarkName,
+    v: QuestionMarkName,
+    r: QuestionMarkName,
+}
+
+#[derive(Debug)]
+struct AggMul {
+    a: QuestionMarkName,
+    b: QuestionMarkName,
+    i: QuestionMarkName,
 }
 
 #[derive(Debug)]
@@ -166,3 +200,56 @@ impl Applier<Math, Meta> for MulAAgg {
         res
     }
 }
+
+impl Applier<Math, Meta> for AggMul {
+    fn apply(&self, egraph: &mut EGraph<Math, Meta>, map: &WildMap) -> Vec<AddResult> {
+        let i = map[&self.i][0];
+        let a = map[&self.a][0];
+        let b = map[&self.b][0];
+
+        let i_schema = egraph.index(i).metadata.schema.clone();
+
+        let mut res = Vec::new();
+
+        let i_s = i_schema.keys().nth(0).unwrap();
+
+        let fv = "sooofresh";
+
+        let iv = egraph.add(Expr::new(Math::Variable(i_s.clone()), smallvec![]));
+        let i_n = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(i_s).unwrap() as f64)), smallvec![]));
+
+        let fdim = egraph.add(Expr::new(Math::Dim, smallvec![iv.id, i_n.id]));
+
+        let v = egraph.add(Expr::new(Math::Variable(Name::from(fv)), smallvec![]));
+        let b_subst = egraph.add(Expr::new(Math::Subst, smallvec![v.id, iv.id, b]));
+        let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, b_subst.id]));
+        let agg = egraph.add(Expr::new(Math::Agg, smallvec![fdim.id, mul.id]));
+
+        res.push(agg);
+
+        res
+    }
+}
+
+//impl Applier<Math, Meta> for VarSubst {
+//    fn apply(&self, egraph: &mut EGraph<Math, Meta>, map: &WildMap) -> Vec<AddResult> {
+//        let e = map[&self.e][0];
+//        let v = map[&self.v][0];
+//        let r = map[&self.r][0];
+//
+//        let i_schema = egraph.index(i).metadata.schema.clone();
+//        let a_schema = egraph.index(a).metadata.schema.clone();
+//
+//        let mut res = Vec::new();
+//
+//        for k in i_schema.keys() {
+//            if !a_schema.contains_key(k) {
+//                let agg = egraph.add(Expr::new(Math::Agg, smallvec![i, b]));
+//                let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, agg.id]));
+//                res.push(mul);
+//            }
+//        }
+//
+//        res
+//    }
+//}

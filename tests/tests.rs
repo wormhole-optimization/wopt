@@ -64,7 +64,7 @@ fn schema() {
 
 #[test]
 fn grammar() {
-    let start = "(SUM (dim j 10) (* b (b+ a (dim j 10) (dim i 5))))";
+    let start = "(* b (SUM (dim j 10) (b+ a (dim j 10) (dim i 5))))";
     let start_expr = Math::parse_expr(start).unwrap();
 
     let (mut egraph, _root) = EGraph::<Math, Meta>::from_expr(&start_expr);
