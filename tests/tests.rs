@@ -51,11 +51,11 @@ fn wopt() {
 #[test]
 fn schema() {
     // let _ = env_logger::builder().is_test(true).try_init();
-    let start = "(+ x y)";// "(SUM (dim j 10) (* (b+ a (dim i 5) (dim j 10)) (b+ b (dim j 10) (dim k 7))))";
+    let start = "(subst (dim i 3) (dim k 5) (SUM (dim j 10) (SUM (dim k 8) (+ (b+ a (dim j 10) (dim k 5)) (b+ b (dim j 10) (dim k 5))))))";
     let start_expr = Math::parse_expr(start).unwrap();
 
     let (mut egraph, _root) = EGraph::<Math, Meta>::from_expr(&start_expr);
-    run_rules(&mut egraph, 4, 500);
+    wopt::run_rules(&mut egraph, 24, 500);
 
     //let rules = wopt::rules();
 
@@ -64,18 +64,20 @@ fn schema() {
 
 #[test]
 fn grammar() {
-    let start = "(* (b+ b (dim j 1) (dim k 8)) (SUM (dim j 1) (b+ a (dim j 1) (dim k 8))))";
+    let start = "(subst (dim i 3) (dim k 5) (SUM (dim j 10) (+ (b+ a (dim j 10) (dim k 5)) (b+ b (dim j 10) (dim k 5)))))";
+    //let start = "(subst i j (* (b+ a b c) (b+ d e f)))";
+    //let start = "(* j (SUM (dim j 1) (b+ a (dim j 1) (dim k 8))))";
+    //let start = "(subst v16775817651048801660 j (b+ a (dim j 1) (dim k 8)))";
     let start_expr = Math::parse_expr(start).unwrap();
 
     let (mut egraph, _root) = EGraph::<Math, Meta>::from_expr(&start_expr);
 
-    //let rules = wopt::rules();
+    let rules = wopt::rules();
 
-    for _ in 0..14 {
-        for (_name, rs) in wopt::rules() {
+    for _ in 0..500 {
+        for (_name, rs) in &rules {
             for rule in rs {
                 rule.run(&mut egraph);
-                egraph.rebuild();
             }
         }
     }
@@ -142,8 +144,8 @@ fn run_rules(egraph: &mut EGraph<Math, Meta>, iters: usize, limit: usize) -> Dur
                 if !ms.is_empty() {
                     matches.push(ms);
                 }
-                // rule.run(&mut egraph);
-                // egraph.rebuild();
+                //rule.run(&mut egraph);
+                //egraph.rebuild();
             }
         }
 

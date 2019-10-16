@@ -118,7 +118,7 @@ pub fn parse_hop_file(s: &str) {
 pub type MathEGraph<M = Meta> = egg::egraph::EGraph<Math, M>;
 
 mod rules;
-pub use rules::rules;
+pub use rules::{rules, run_rules};
 
 type Constant = NotNan<f64>;
 
@@ -131,6 +131,8 @@ define_term! {
 
         Dim = "dim",
         Matrix = "b+",
+        Val = "val",
+
         Constant(Constant),
         Variable(Name),
 
@@ -214,6 +216,9 @@ impl egg::egraph::Metadata<Math> for Meta {
                 ns.insert(Name::from(""), un);
                 ns
             }
+            Math::Val => {
+                HashMap::default()
+            }
             Math::Variable(v) => {
                 let mut ns = HashMap::new();
                 ns.insert(v, 0);
@@ -225,18 +230,19 @@ impl egg::egraph::Metadata<Math> for Meta {
                 let v = &expr.children.iter().nth(1).unwrap().schema;
                 let r = &expr.children.iter().nth(2).unwrap().schema;
 
-                let mut n = 0;
+                //let mut n = 0;
 
                 let mut schema = r.clone();
                 if e.keys().nth(0) != v.keys().nth(0) {
                     for k in v.keys() {
                         println!("key is {:?}", k);
-                        n = schema.remove(k).unwrap();
-                        println!("removed {:?}", k);
+                        if let Some(n) = schema.remove(k) {
+                            println!("removed {:?}", k);
+                            for k in e.keys() {
+                                schema.insert(k.clone(), n);
+                            };
+                        }
                     }
-                    for k in e.keys() {
-                        schema.insert(k.clone(), n);
-                    };
                 }
                 schema
             }

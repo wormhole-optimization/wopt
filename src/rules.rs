@@ -4,6 +4,8 @@ use std::ops::Index;
 use std::hash::{Hash, Hasher};
 use ordered_float::NotNan;
 
+use log::*;
+
 use crate::{Math, Meta};
 use egg::{
     egraph::{EGraph, AddResult},
@@ -20,6 +22,54 @@ fn mk_rules(tuples: &[(&str, &str, &str)]) -> Vec<Rewrite<Math, Meta>> {
         .collect()
 }
 
+pub fn run_rules(
+    egraph: &mut egg::egraph::EGraph<Math, Meta>,
+    iters: usize,
+    limit: usize,
+) {
+    let rules = rules();
+
+    'outer: for i in 0..iters {
+        println!("\n\nIteration {}\n", i);
+
+        let mut applied = 0;
+        let mut matches = Vec::new();
+        for (_rn, rw) in rules.iter() {
+            for rule in rw {
+                let ms = rule.search(&egraph);
+                if !ms.is_empty() {
+                    matches.push(ms);
+                }
+            }
+        }
+
+        for m in matches {
+            let actually_matched = m.apply_with_limit(egraph, limit).len();
+            if egraph.total_size() > limit {
+                error!("Node limit exceeded. {} > {}", egraph.total_size(), limit);
+                break 'outer;
+            }
+
+            applied += actually_matched;
+            if actually_matched > 0 {
+                println!("Applied {} {} times", m.rewrite.name, actually_matched);
+            }
+        }
+
+        egraph.rebuild();
+        println!(
+            "Size: n={}, e={}",
+            egraph.total_size(),
+            egraph.number_of_classes()
+        );
+
+        //if applied == 0 {
+        //    println!("Stopping early!");
+        //    break;
+        //}
+    }
+}
+
 #[rustfmt::skip]
 pub fn rules() -> IndexMap<&'static str, Vec<Rewrite<Math, Meta>>> {
     let mut m = IndexMap::new();
@@ -30,13 +80,13 @@ pub fn rules() -> IndexMap<&'static str, Vec<Rewrite<Math, Meta>>> {
         m.insert(name, mk_rules(rules));
     };
 
-    add(
-        "commutativity",
-        &[
-            ("+-commutative", "(+ ?a ?b)", "(+ ?b ?a)"),
-            ("*-commutative", "(* ?a ?b)", "(* ?b ?a)"),
-        ],
-    );
+    //add(
+    //    "commutativity",
+    //    &[
+    //        ("+-commutative", "(+ ?a ?b)", "(+ ?b ?a)"),
+    //        ("*-commutative", "(* ?a ?b)", "(* ?b ?a)"),
+    //    ],
+    //);
     add(
         "associativity",
         &[
@@ -62,10 +112,11 @@ pub fn rules() -> IndexMap<&'static str, Vec<Rewrite<Math, Meta>>> {
     add(
         "substituting",
         &[
-            ("subst-+", "(subst ?e ?v (+ ?a ?b))", "(+ (subst ?e ?v ?a) (subst ?e ?v ?b))"),
-            ("subst-*", "(subst ?e ?v (* ?a ?b))", "(* (subst ?e ?v ?a) (subst ?e ?v ?b))"),
-            ("subst-matrix", "(subst ?e ?v (b+ ?a ?i ?j))", "(b+ (subst ?e ?v ?a) (subst ?e ?v ?i) (subst ?e ?v ?j))"),
-        ]
+            ("subst-+",      "(subst ?e ?v (+ ?a ?b))",     "(+ (subst ?e ?v ?a) (subst ?e ?v ?b))"),
+            ("subst-*",      "(subst ?e ?v (* ?a ?b))",     "(* (subst ?e ?v ?a) (subst ?e ?v ?b))"),
+            ("subst-matrix", "(subst ?e ?v (b+ ?a ?i ?j))", "(b+ ?a (subst ?e ?v ?i) (subst ?e ?v ?j))"),
+            ("subst-val",    "(subst ?e ?v (val ?n))",      "(val ?n)"),
+        ],
     );
 
     add(
@@ -82,13 +133,13 @@ pub fn rules() -> IndexMap<&'static str, Vec<Rewrite<Math, Meta>>> {
         ],
     );
 
-    add(
-        "agg-distribute",
-        &[
-            ("pullup-add",    "(SUM ?i (+ ?a ?b))",            "(+ (SUM ?i ?a) (SUM ?i ?b))"),
-            ("pushdown-add",  "(+ (SUM ?i ?a) (SUM ?i ?b))",  "(SUM ?i (+ ?a ?b))",),
-        ],
-    );
+    //add(
+    //    "agg-distribute",
+    //    &[
+    //        ("pullup-add",    "(SUM ?i (+ ?a ?b))",            "(+ (SUM ?i ?a) (SUM ?i ?b))"),
+    //        ("pushdown-add",  "(+ (SUM ?i ?a) (SUM ?i ?b))",  "(SUM ?i (+ ?a ?b))",),
+    //    ],
+    //);
 
     add(
         "swap-aggregate",
@@ -126,48 +177,46 @@ pub fn rules() -> IndexMap<&'static str, Vec<Rewrite<Math, Meta>>> {
         }
     );
 
-    let v_subst = Rewrite::new(
-        "var-subst",
-        Math::parse_pattern("(subst ?e ?v1 (dim ?i ?n))").unwrap(),
-        VarSubst {
-            e: "?e".parse().unwrap(),
-            v1: "?v1".parse().unwrap(),
-            v2: "?v2".parse().unwrap(),
-            body: None,
-        },
-    );
-
     let a_subst = Rewrite::new(
         "agg-subst",
-        Math::parse_pattern("(subst ?e ?v1 (SUM ?v2 ?body))",).unwrap(),
-        VarSubst {
+        Math::parse_pattern("(subst ?e ?v1 (SUM ?v2 ?body))").unwrap(),
+        AggSubst {
             e: "?e".parse().unwrap(),
             v1: "?v1".parse().unwrap(),
             v2: "?v2".parse().unwrap(),
-            body: Some("?body".parse().unwrap()),
+            body: "?body".parse().unwrap(),
         },
     );
 
-    //let subst = Rewrite::new(
-    //    "var_subst",
-    //    Math::parse_pattern("(subst ?e ?v ?r)").unwrap(),
-    //    VarSubst {
-    //        e: "?e".parse().unwrap(),
-    //        v: "?v".parse().unwrap(),
-    //        r: "?r".parse().unwrap(),
-    //    }
-    //);
+    let v_subst = Rewrite::new(
+        "dim_subst",
+        Math::parse_pattern("(subst ?e ?v (dim ?i ?n))").unwrap(),
+        VarSubst {
+            e: "?e".parse().unwrap(),
+            v: "?v".parse().unwrap(),
+            i: "?i".parse().unwrap(),
+            n: "?n".parse().unwrap(),
+        }
+    );
 
-    m.insert("dyn_rules", vec![sum_i_a, mul_a_agg, agg_i_mul, v_subst, a_subst]);
+    m.insert("dyn_rules", vec![sum_i_a, mul_a_agg, agg_i_mul, a_subst, v_subst]);
     m
 }
 
 #[derive(Debug)]
 struct VarSubst {
     e: QuestionMarkName,
+    v: QuestionMarkName,
+    i: QuestionMarkName,
+    n: QuestionMarkName,
+}
+
+#[derive(Debug)]
+struct AggSubst {
+    e: QuestionMarkName,
     v1: QuestionMarkName,
     v2: QuestionMarkName,
-    body: Option<QuestionMarkName>,
+    body: QuestionMarkName,
 }
 
 #[derive(Debug)]
@@ -203,7 +252,8 @@ impl Applier<Math, Meta> for SumIA {
         for k in i_schema.keys() {
             if !a_schema.contains_key(k) {
                 let i_abs = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(k).unwrap() as f64)), smallvec![]));
-                let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, i_abs.id]));
+                let i_val = egraph.add(Expr::new(Math::Val, smallvec![i_abs.id]));
+                let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, i_val.id]));
                 res.push(mul);
             }
         }
@@ -246,66 +296,71 @@ impl Applier<Math, Meta> for AggMul {
 
         let mut res = Vec::new();
 
-        for k in i_schema.keys() {
-            if !a_schema.contains_key(k) {
-                let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, b]));
-                let agg = egraph.add(Expr::new(Math::Agg, smallvec![i, mul.id]));
-                res.push(agg);
-            } else {
-                println!("YESSSS");
-                let i_s = i_schema.keys().nth(0).unwrap();
+        let k = i_schema.keys().nth(0).unwrap();
 
-                let mut s = DefaultHasher::new();
-                [i, a, b].hash(&mut s);
-                let fv = s.finish().to_string();
+        if !a_schema.contains_key(k) {
+            let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, b]));
+            let agg = egraph.add(Expr::new(Math::Agg, smallvec![i, mul.id]));
+            res.push(agg);
+        } else {
+            let mut s = DefaultHasher::new();
+            [i, a, b].hash(&mut s);
+            let fv = "yayay";//"v".to_owned() + &(s.finish() % 97564).to_string();
 
-                let iv = egraph.add(Expr::new(Math::Variable(i_s.clone()), smallvec![]));
-                let i_n = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(i_s).unwrap() as f64)), smallvec![]));
+            let v = egraph.add(Expr::new(Math::Variable(Name::from(fv)), smallvec![]));
+            let i_n = egraph.add(Expr::new(Math::Constant(NotNan::from(*i_schema.get(k).unwrap() as f64)), smallvec![]));
+            let fdim = egraph.add(Expr::new(Math::Dim, smallvec![v.id, i_n.id]));
 
-                let v = egraph.add(Expr::new(Math::Variable(Name::from(fv)), smallvec![]));
+            //let iv = egraph.add(Expr::new(Math::Variable(k.clone()), smallvec![]));
+            let b_subst = egraph.add(Expr::new(Math::Subst, smallvec![fdim.id, i, b]));
 
-                let fdim = egraph.add(Expr::new(Math::Dim, smallvec![v.id, i_n.id]));
+            let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, b_subst.id]));
 
-                let b_subst = egraph.add(Expr::new(Math::Subst, smallvec![v.id, iv.id, b]));
-                let mul = egraph.add(Expr::new(Math::Mul, smallvec![a, b_subst.id]));
-                let agg = egraph.add(Expr::new(Math::Agg, smallvec![fdim.id, mul.id]));
+            let agg = egraph.add(Expr::new(Math::Agg, smallvec![fdim.id, mul.id]));
 
-                res.push(agg);
-            }
+            res.push(AddResult{
+                was_there: false,
+                id: agg.id,
+            });
         }
 
         res
     }
 }
 
-impl Applier<Math, Meta> for VarSubst {
+impl Applier<Math, Meta> for AggSubst {
     fn apply(&self, egraph: &mut EGraph<Math, Meta>, map: &WildMap) -> Vec<AddResult> {
         let v1 = map[&self.v1][0];
         let v2 = map[&self.v2][0];
         let e = map[&self.e][0];
+        let body = map[&self.body][0];
 
-        let v2_schema = egraph.index(v2).metadata.schema.clone();
-        let v1_s = egraph.index(v1).metadata.schema.keys().nth(0).unwrap();
-
-        let res = if let Some(body) = &self.body {
-            let body = map[body][0];
-            // substituting in a lambda
-            if v2_schema.contains_key(v1_s) {
-                egraph.add(Expr::new(Math::Agg, smallvec![v2, body]))
-            } else {
-                let sub_body = egraph.add(Expr::new(Math::Subst, smallvec![e, v1, body]));
-                egraph.add(Expr::new(Math::Agg, smallvec![v2, sub_body.id]))
-            }
+        let res = if v1 == v2 {
+            egraph.add(Expr::new(Math::Agg, smallvec![v2, body]))
         } else {
-            // substituting for a variable
-            if v1 == v2 {
-                AddResult {
-                    was_there: true,
-                    id: e,
-                }
-            } else {
-                egraph.add(Expr::new(Math::Variable(v2_schema.keys().nth(0).unwrap().clone()), smallvec![]))
-            }
+            let sub_body = egraph.add(Expr::new(Math::Subst, smallvec![e, v1, body]));
+            egraph.add(Expr::new(Math::Agg, smallvec![v2, sub_body.id]))
+        };
+
+        vec![res]
+    }
+}
+
+
+impl Applier<Math, Meta> for VarSubst {
+    fn apply(&self, egraph: &mut EGraph<Math, Meta>, map: &WildMap) -> Vec<AddResult> {
+        let v = map[&self.v][0];
+        let e = map[&self.e][0];
+        let i = map[&self.i][0];
+        let n = map[&self.n][0];
+
+        let v_s = egraph.index(v).metadata.schema.keys().nth(0).unwrap();
+        let i_schema = &egraph.index(i).metadata.schema;
+
+        let res = if i_schema.contains_key(v_s) {
+            egraph.add(Expr::new(Math::Dim, smallvec![e, n]))
+        } else {
+            egraph.add(Expr::new(Math::Dim, smallvec![i, n]))
         };
 
         vec![res]

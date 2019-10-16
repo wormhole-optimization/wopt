@@ -2,108 +2,95 @@ digraph {
   compound=true
   subgraph cluster_0 {
     style=dotted
-    0.0[label = "b"]
+    0.0[label = "i"]
   }
   subgraph cluster_1 {
     style=dotted
-    1.0[label = "j"]
+    1.0[label = "3"]
   }
   subgraph cluster_2 {
     style=dotted
-    2.0[label = "1"]
+    2.0[label = "dim"]
   }
   subgraph cluster_3 {
     style=dotted
-    3.0[label = "dim"]
+    3.0[label = "k"]
   }
   subgraph cluster_4 {
     style=dotted
-    4.0[label = "k"]
+    4.0[label = "5"]
   }
   subgraph cluster_5 {
     style=dotted
-    5.0[label = "8"]
+    5.0[label = "dim"]
   }
   subgraph cluster_6 {
     style=dotted
-    6.0[label = "dim"]
+    6.0[label = "j"]
   }
   subgraph cluster_7 {
     style=dotted
-    7.0[label = "b+"]
+    7.0[label = "10"]
   }
   subgraph cluster_8 {
     style=dotted
-    8.0[label = "a"]
+    8.0[label = "dim"]
   }
   subgraph cluster_9 {
     style=dotted
-    9.0[label = "b+"]
+    9.0[label = "a"]
   }
   subgraph cluster_10 {
     style=dotted
-    10.0[label = "SUM"]
+    10.0[label = "b+"]
   }
   subgraph cluster_11 {
     style=dotted
-    11.0[label = "*"]
-    11.1[label = "*"]
-    11.2[label = "SUM"]
-    11.3[label = "*"]
-    11.4[label = "*"]
+    11.0[label = "b"]
+  }
+  subgraph cluster_12 {
+    style=dotted
+    12.0[label = "b+"]
   }
   subgraph cluster_13 {
     style=dotted
-    13.0[label = "16775817651048801660"]
+    13.0[label = "+"]
   }
   subgraph cluster_14 {
     style=dotted
-    14.0[label = "dim"]
+    14.0[label = "SUM"]
   }
   subgraph cluster_15 {
     style=dotted
-    15.0[label = "subst"]
+    15.0[label = "SUM"]
+    15.1[label = "subst"]
   }
   subgraph cluster_16 {
     style=dotted
-    16.0[label = "*"]
-    16.1[label = "*"]
+    16.0[label = "subst"]
   }
-  subgraph cluster_19 {
-    style=dotted
-    19.0[label = "SUM"]
-  }
-  3.0 -> 1.0 [lhead = cluster_1, label = 0]
-  3.0 -> 2.0 [lhead = cluster_2, label = 1]
-  6.0 -> 4.0 [lhead = cluster_4, label = 0]
-  6.0 -> 5.0 [lhead = cluster_5, label = 1]
-  7.0 -> 0.0 [lhead = cluster_0, label = 0]
-  7.0 -> 3.0 [lhead = cluster_3, label = 1]
-  7.0 -> 6.0 [lhead = cluster_6, label = 2]
-  9.0 -> 8.0 [lhead = cluster_8, label = 0]
-  9.0 -> 3.0 [lhead = cluster_3, label = 1]
-  9.0 -> 6.0 [lhead = cluster_6, label = 2]
-  10.0 -> 3.0 [lhead = cluster_3, label = 0]
-  10.0 -> 9.0 [lhead = cluster_9, label = 1]
-  11.0 -> 10.0 [lhead = cluster_10, label = 0]
-  11.0 -> 7.0 [lhead = cluster_7, label = 1]
-  11.1 -> 7.0 [lhead = cluster_7, label = 0]
-  11.1 -> 10.0 [lhead = cluster_10, label = 1]
-  11.2 -> 14.0 [lhead = cluster_14, label = 0]
-  11.2 -> 16.0 [lhead = cluster_16, label = 1]
-  11.3 -> 7.0 [lhead = cluster_7, label = 0]
-  11.3 -> 19.0 [lhead = cluster_19, label = 1]
-  11.4 -> 19.0 [lhead = cluster_19, label = 0]
-  11.4 -> 7.0 [lhead = cluster_7, label = 1]
-  14.0 -> 13.0 [lhead = cluster_13, label = 0]
-  14.0 -> 2.0 [lhead = cluster_2, label = 1]
-  15.0 -> 13.0 [lhead = cluster_13, label = 0]
-  15.0 -> 1.0 [lhead = cluster_1, label = 1]
-  15.0 -> 9.0 [lhead = cluster_9, label = 2]
-  16.0 -> 15.0 [lhead = cluster_15, label = 0]
-  16.0 -> 7.0 [lhead = cluster_7, label = 1]
-  16.1 -> 7.0 [lhead = cluster_7, label = 0]
-  16.1 -> 15.0 [lhead = cluster_15, label = 1]
-  19.0 -> 14.0 [lhead = cluster_14, label = 0]
-  19.0 -> 15.0 [lhead = cluster_15, label = 1]
+  2.0 -> 0.0 [lhead = cluster_0, label = 0]
+  2.0 -> 1.0 [lhead = cluster_1, label = 1]
+  5.0 -> 3.0 [lhead = cluster_3, label = 0]
+  5.0 -> 4.0 [lhead = cluster_4, label = 1]
+  8.0 -> 6.0 [lhead = cluster_6, label = 0]
+  8.0 -> 7.0 [lhead = cluster_7, label = 1]
+  10.0 -> 9.0 [lhead = cluster_9, label = 0]
+  10.0 -> 8.0 [lhead = cluster_8, label = 1]
+  10.0 -> 5.0 [lhead = cluster_5, label = 2]
+  12.0 -> 11.0 [lhead = cluster_11, label = 0]
+  12.0 -> 8.0 [lhead = cluster_8, label = 1]
+  12.0 -> 5.0 [lhead = cluster_5, label = 2]
+  13.0 -> 10.0 [lhead = cluster_10, label = 0]
+  13.0 -> 12.0 [lhead = cluster_12, label = 1]
+  14.0 -> 8.0 [lhead = cluster_8, label = 0]
+  14.0 -> 13.0 [lhead = cluster_13, label = 1]
+  15.0 -> 8.0 [lhead = cluster_8, label = 0]
+  15.0 -> 16.0 [lhead = cluster_16, label = 1]
+  15.1 -> 2.0 [lhead = cluster_2, label = 0]
+  15.1 -> 5.0 [lhead = cluster_5, label = 1]
+  15.1 -> 14.0 [lhead = cluster_14, label = 2]
+  16.0 -> 2.0 [lhead = cluster_2, label = 0]
+  16.0 -> 5.0 [lhead = cluster_5, label = 1]
+  16.0 -> 13.0 [lhead = cluster_13, label = 2]
 }
